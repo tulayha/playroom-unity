@@ -186,6 +186,17 @@ namespace Playroom
                     _interop.KickPlayerWrapper(_id, InvokeKickCallBack);
                 }
 
+                public void LeaveRoom(Action onLeave = null)
+                {
+                    IPlayerBase.onLeaveCallback = onLeave;
+                    LeaveRoomInternal(InvokeLeaveRoom);
+                }
+
+                [MonoPInvokeCallback(typeof(Action))]
+                private static void InvokeLeaveRoom()
+                {
+                    IPlayerBase.onKickCallBack?.Invoke();
+                }
 
                 private static Action<string> onSetState;
 

@@ -133,6 +133,9 @@ namespace Playroom
         [DllImport("__Internal")]
         private static extern string GetProfileByPlayerId(string playerID);
 
+        [DllImport("__Internal")]
+        private static extern void LeaveRoomInternal(Action callback = null);
+
         #region Persistence
 
         [DllImport("__Internal")]
