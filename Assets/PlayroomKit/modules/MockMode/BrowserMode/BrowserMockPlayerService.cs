@@ -67,7 +67,7 @@ namespace Playroom
             _ubb.CallJs("SetPlayerStateByPlayerId", null, null, false, _id, key, json,
                 reliable.ToString().ToLower());
         }
-        
+
         public T GetState<T>(string key)
         {
             string rawValue = _ubb.CallJs<string>("GetPlayerStateByPlayerId", null, null, false, _id, key);
@@ -81,7 +81,7 @@ namespace Playroom
             try
             {
                 var jsonNode = JSON.Parse(rawValue);
-                
+
                 if (typeof(T) == typeof(string))
                 {
                     return (T)(object)jsonNode.Value;
@@ -108,7 +108,7 @@ namespace Playroom
                     catch (ArgumentException)
                     {
                         Debug.LogError($"Failed to parse '{rawValue}' to Enum of type {typeof(T)}");
-                        return default;  
+                        return default;
                     }
                 }
 
@@ -119,8 +119,8 @@ namespace Playroom
                 Debug.LogError($"Failed to parse state for key '{key}': {e.Message}\nReceived value: {rawValue}");
                 return default;
             }
-            
-            
+
+
         }
 
         #endregion
@@ -140,6 +140,11 @@ namespace Playroom
             _ubb.CallJs("Kick", null, null, true, _id);
         }
 
+        public void LeaveRoom(Action onLeave = null)
+        {
+            DebugLogger.LogWarning("[MockMode] leaveRoom doesn't work in mock mode, build test required");
+        }
+
         public void WaitForState(string stateKey, Action<string> onStateSetCallback = null)
         {
             string callbackKey = $"WaitForState_{stateKey}";
@@ -152,7 +157,7 @@ namespace Playroom
 
             _ubb.CallJs("WaitForPlayerState", null, null, true, _id, stateKey, callbackKey);
         }
-        
+
         private List<Action<string>> OnQuitCallbacks = new();
 
         public Action OnQuit(Action<string> callback)
@@ -166,14 +171,14 @@ namespace Playroom
 
             return Unsubscribe;
         }
-        
+
         public void OnQuitWrapperCallback(string id)
         {
             if (OnQuitCallbacks != null)
                 foreach (var callback in OnQuitCallbacks)
                     callback?.Invoke(id);
         }
-        
+
         internal void InvokePlayerOnQuitCallback(string id)
         {
             OnQuitWrapperCallback(id);

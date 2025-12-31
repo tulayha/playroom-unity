@@ -121,7 +121,10 @@ mergeInto(LibraryManager.library, {
       return;
     }
 
-    var myPlayerID = Playroom.myPlayer().id;
+    const player = Playroom.myPlayer()
+    if (!player || player.id == null) return;
+
+    var myPlayerID = player.id;
     var bufferSize = lengthBytesUTF8(myPlayerID) + 1;
     var buffer = _malloc(bufferSize);
     stringToUTF8(myPlayerID, buffer, bufferSize);
@@ -818,6 +821,21 @@ mergeInto(LibraryManager.library, {
       .catch((error) => {
         console.error("Error kicking player:", error);
       });
+  },
+
+  LeaveRoomInternal: function(callback) {
+    if (!window.Playroom) {
+      console.error(
+        "Playroom library is not loaded. Please make sure to call InsertCoin first."
+      );
+      return;
+    }    
+
+    Playroom.myPlayer().leaveRoom().then(() => {
+      {{{ makeDynCall('v', 'callback') }}};
+    }).catch((error) => {
+      console.error("[JS]: Error calling leaveRoom: ", error);
+    });
   },
 
   ResetStatesInternal: function (keysToExclude, onStatesReset) {

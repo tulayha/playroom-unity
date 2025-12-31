@@ -126,6 +126,17 @@ namespace Playroom
                 _playerService.Kick(OnKickCallBack);
             }
 
+            public void LeaveRoom(Action onLeaveCallback = null)
+            {
+                if (!IsPlayRoomInitialized)
+                {
+                    Debug.LogError("[Mock Mode] Playroom not initialized yet! Please call InsertCoin.");
+                    return;
+                }
+
+                _playerService.LeaveRoom(onLeaveCallback);
+            }
+
             public void WaitForState(string StateKey, Action<string> onStateSetCallback = null)
             {
                 if (!IsPlayRoomInitialized)
@@ -160,7 +171,7 @@ namespace Playroom
             {
                 [NonSerialized]
                 public UnityEngine.Color color;
-                
+
                 public PlayerProfileColor playerProfileColor;
                 public string name;
                 public string photo;

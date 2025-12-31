@@ -61,27 +61,27 @@ namespace Playroom
                 {
                     SetStateHelper(key, value, reliable);
                 }
-                
+
                 public void SetState(string key, Enum value, bool reliable = false)
                 {
                     SetStateHelper(key, value.ToString(), reliable);
                 }
-                
-                
+
+
 
                 public T GetState<T>(string key)
                 {
                     if (mockPlayerStatesDictionary.TryGetValue(key, out var value) && value is T typedValue)
                     {
-                      try
-                {
-                    return (T)Convert.ChangeType(typedValue, typeof(T));
-                }
-                catch (InvalidCastException)
-                {
-                    Debug.LogWarning($"Failed to convert the value of key '{key}' to type {typeof(T)}.");
-                    return default;
-                }
+                        try
+                        {
+                            return (T)Convert.ChangeType(typedValue, typeof(T));
+                        }
+                        catch (InvalidCastException)
+                        {
+                            Debug.LogWarning($"Failed to convert the value of key '{key}' to type {typeof(T)}.");
+                            return default;
+                        }
                     }
                     else
                     {
@@ -121,6 +121,11 @@ namespace Playroom
                     var player = GetPlayerById(_id);
                     Players.Remove(player.id);
                     IPlayerBase.onKickCallBack?.Invoke();
+                }
+
+                public void LeaveRoom(Action onLeave = null)
+                {
+                    DebugLogger.LogWarning("[MockMode] leaveRoom doesn't work in mock mode, build test required");
                 }
 
                 public void WaitForState(string stateKey, Action<string> onStateSetCallback = null)

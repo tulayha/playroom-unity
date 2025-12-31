@@ -64,7 +64,10 @@ public class GameManager2d : MonoBehaviour
         }, () =>
         {
             _playroomKit.OnPlayerJoin(AddPlayer);
-            print($"[Unity Log] isHost: {_playroomKit.IsHost()}");
+            Debug.Log($"[Unity Log] isHost: {_playroomKit.IsHost()}");
+        }, () =>
+        {
+            Debug.LogWarning("OnDisconnect Callback Called");
         });
     }
 
