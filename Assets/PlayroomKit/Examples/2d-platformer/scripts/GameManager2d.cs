@@ -6,57 +6,52 @@ using Random = UnityEngine.Random;
 using Debug = UnityEngine.Debug;
 using TMPro;
 
-
 public class GameManager2d : MonoBehaviour
 {
-    [SerializeField]
-    private GameObject playerPrefab;
+    [SerializeField] private GameObject playerPrefab;
+    [SerializeField] private string roomCode;
 
-    [SerializeField]
-    private string roomCode;
-
-
-    /// <summary>
-    /// player scores and UI to display score of the game.
-    /// </summary>
     [Header("Score and UI")]
-    [SerializeField]
-    private int score = 0;
-    [SerializeField]
-    private TextMeshProUGUI scoreTextPlayer1;
-    [SerializeField]
-    private TextMeshProUGUI scoreTextPlayer2;
+    [SerializeField] private int score = 0;
+    [SerializeField] private Transform scorePanel;
+    [SerializeField] private GameObject scoreTextPrefab;
 
-    private TextMeshProUGUI selectedScoreText;
+    private Dictionary<string, TextMeshProUGUI> playerScoreTexts = new();
 
+    [SerializeField] private TextMeshProUGUI hellowWorldText;
+
+    [Header("Player Count UI")]
+    [SerializeField] private TextMeshProUGUI PlayerCountText;
 
     private static bool playerJoined;
 
-    /// <summary>
-    /// List of players and their gameObjects.
-    /// </summary>
     private static readonly List<PlayroomKit.Player> players = new();
     private static readonly List<GameObject> playerGameObjects = new();
     private static Dictionary<string, GameObject> PlayerDict = new();
 
     private PlayroomKit _playroomKit;
-    [SerializeField]
-    private string newData;
+    [System.Serializable] public class ScoreData { public int value; } 
 
+    [System.Serializable]public class TestData{
+        public string message;
+        public string playerID;
+        public int randomNumber;
+        public NestedData nested;
+    }
+    [System.Serializable]public class NestedData{
+        public string inner;
+    }
 
     void Awake()
     {
         _playroomKit = new();
     }
 
-    /// <summary>
-    /// Initialize PlayroomKit, starts multiplayer.
-    /// </summary>
     private void Initialize()
     {
         _playroomKit.InsertCoin(new InitOptions()
         {
-            maxPlayersPerRoom = 2,
+            maxPlayersPerRoom = 4,
             defaultPlayerStates = new()
             {
                 { "score", 0 },
@@ -71,46 +66,48 @@ public class GameManager2d : MonoBehaviour
         });
     }
 
-    /// <summary>
-    /// Register the RPC method to update the score.
-    /// </summary>
     void Start()
     {
         Initialize();
 
         _playroomKit.RpcRegister("ShootBullet", HandleScoreUpdate, "You shot a bullet!");
-        _playroomKit.WaitForState("test", (s) => { Debug.LogWarning($"After waiting for test: {s}"); });
-    }
-
-    /// <summary>
-    /// Update the Score UI of the player and sync.
-    /// </summary>
-    void HandleScoreUpdate(string data, string caller)
-    {
-        var player = _playroomKit.GetPlayer(caller);
-        Debug.Log($"Caller: {caller}, Player Name: {player?.GetProfile().name}, Data: {data}");
-
-        if (PlayerDict.TryGetValue(caller, out GameObject playerObj))
+        _playroomKit.RpcRegister("DisplayHelloWorldRPC", (data, caller) => DisplayHelloWorldRPC(data, caller), "Displays Hello World on all players' screens");
+        _playroomKit.RpcRegister("ReceiveplayerRPCData", (data, caller) => ReceiveplayerRPCData(data), "Receives playerRPC data as JSON string");
+        _playroomKit.RpcRegister("TestDataRPC", (data, caller) => TestDataRPC(data, caller), "Test Data");
+        _playroomKit.RpcRegister("TestDictionaryRPC", (data, caller) => TestDictionaryRPC(data, caller), "Test Dictionary");
+        
+        void HandleScoreUpdate(string data, string caller)
         {
-            var playerController = playerObj.GetComponent<PlayerController2d>();
-            if (playerController != null)
+            var player = _playroomKit.GetPlayer(caller);
+            Debug.Log($"Caller: {caller}, Player Name: {player?.GetProfile().name}, Data: {data}");
+
+            if (PlayerDict.TryGetValue(caller, out GameObject playerObj))
             {
-                playerController.scoreText.text = $"Score: {data}";
+                var playerController = playerObj.GetComponent<PlayerController2d>();
+                if (playerController != null)
+                {
+                try{  
+                    var scoreData = JsonUtility.FromJson<ScoreData>(data);
+                    playerController.scoreText.text = $"Score: {scoreData.value}";
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Error deserializing score data: {ex.Message}");
+                    playerController.scoreText.text = $"Score: {data}";
+                }
+                }
+                else
+                {
+                    Debug.LogError($"PlayerController not found on GameObject for caller: {caller}");
+                }
             }
             else
             {
-                Debug.LogError($"PlayerController not found on GameObject for caller: {caller}");
+                Debug.LogError($"No GameObject found for caller: {caller}");
             }
-        }
-        else
-        {
-            Debug.LogError($"No GameObject found for caller: {caller}");
         }
     }
 
-    /// <summary>
-    /// Update the player position and sync.
-    /// </summary>
     private void Update()
     {
         if (playerJoined)
@@ -130,20 +127,64 @@ public class GameManager2d : MonoBehaviour
                 {
                     var pos = players[i].GetState<Vector3>("pos");
                     var color = players[i].GetState<Color>("color");
-                    if (playerGameObjects != null)
-                    {
-                        playerGameObjects[i].GetComponent<Transform>().position = pos;
-                        playerGameObjects[i].GetComponent<SpriteRenderer>().color = color;
-                    }
+                    playerObj.transform.position = pos;
+                    playerObj.GetComponent<SpriteRenderer>().color = color;
                 }
             }
+
+            
+        }
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            _playroomKit.RpcCall("DisplayHelloWorldRPC", "Hello, World!", PlayroomKit.RpcMode.ALL, () =>
+            {
+            Debug.Log("RPC call to display 'Hello World' sent successfully.");
+            });
+        }
+
+
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            var myId = _playroomKit.MyPlayer()?.id ?? "unknown";
+            TestData testData = new TestData
+            {
+            message = "Hello, World!",
+            playerID = myId,
+            randomNumber = UnityEngine.Random.Range(1, 100),
+            nested = new NestedData { inner = "value" }
+            };
+
+
+            _playroomKit.RpcCall("TestDataRPC", testData, PlayroomKit.RpcMode.ALL, () =>
+        {
+            Debug.Log("RPC call to send test dictionary sent successfully.");
+        });
+        }
+
+        
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            var myId= _playroomKit.MyPlayer()?.id ?? "unkown";
+            Dictionary <string,object> testDict = new Dictionary<string,object>
+            {
+                {"message","Hellow through Dictionary"},
+                {"playerID",myId},
+                {"randomNumber",UnityEngine.Random.Range(1,10)},
+                {"nested",new Dictionary <string,string> {{"inner","value"} } }
+            };
+            _playroomKit.RpcCall("TestDictionaryRPC", testDict, PlayroomKit.RpcMode.ALL, () => {
+                Debug.Log("RPC call sent to test Dictionary success");
+            } ); 
+        }    
+
+
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            SendplayerRPCData();
         }
     }
 
-
-    /// <summary>
-    /// Shoot bullet and update the score.
-    /// </summary>
     private void ShootBullet(int playerIndex)
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -158,43 +199,163 @@ public class GameManager2d : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Adds the "player" to the game scene.
-    /// </summary>
+    
     public void AddPlayer(PlayroomKit.Player player)
     {
-        var spawnPos = new Vector3(Random.Range(-4, 4), Random.Range(1, 5), 0);
+        Vector3 spawnPos = new(Random.Range(-4, 4), Random.Range(1, 5), 0);
         GameObject playerObj = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
 
         player.SetState("color", player.GetProfile().color);
 
-        PlayerDict.Add(player.id, playerObj);
+        PlayerDict[player.id] = playerObj;
         players.Add(player);
         playerGameObjects.Add(playerObj);
 
-        selectedScoreText = (players.Count == 1) ? scoreTextPlayer1 : scoreTextPlayer2;
-        playerObj.GetComponent<PlayerController2d>().scoreText = selectedScoreText;
+        string playerName = string.IsNullOrEmpty(player.GetProfile().name)
+            ? $"Player {players.Count}"
+            : player.GetProfile().name;
+
+        GameObject scoreObj = Instantiate(scoreTextPrefab, scorePanel);
+        TextMeshProUGUI scoreText = scoreObj.GetComponent<TextMeshProUGUI>();
+        scoreText.text = $"{playerName}: 0";
+        scoreText.color = player.GetProfile().color;
+
+        playerScoreTexts[player.id] = scoreText;
+
+        var controller = playerObj.GetComponent<PlayerController2d>();
+        if (controller != null)
+        {
+            controller.scoreText = scoreText;
+        }
 
         playerJoined = true;
         player.OnQuit(RemovePlayer);
+
+        UpdatePlayerCountText();
+        Debug.Log($" Added player: {playerName}");
     }
 
-    /// <summary>
-    /// Remove player from the game, called when the player leaves / closes the game.
-    /// </summary>
-    private static void RemovePlayer(string playerID)
+    private void RemovePlayer(string playerID)
+{
+    if (PlayerDict.TryGetValue(playerID, out GameObject player))
     {
-        if (PlayerDict.TryGetValue(playerID, out GameObject player))
+        PlayerDict.Remove(playerID);
+        players.Remove(players.Find(p => p.id == playerID));
+        playerGameObjects.Remove(player);
+        Destroy(player);
+
+        if (playerScoreTexts.ContainsKey(playerID))
         {
-            PlayerDict.Remove(playerID);
-            players.Remove(players.Find(p => p.id == playerID));
-            playerGameObjects.Remove(player);
-            Destroy(player);
+            Destroy(playerScoreTexts[playerID].gameObject);
+            playerScoreTexts.Remove(playerID);
         }
-        else
+        UpdatePlayerCountText();
+    }
+    else
+    {
+        Debug.LogWarning("Player not found in dictionary");
+    }
+    }
+
+    private void UpdatePlayerCountText()
+    {
+        if (PlayerCountText != null)
         {
-            Debug.LogWarning("Player is not in dictionary");
+            PlayerCountText.text = $"Players: {players.Count}";
         }
     }
+
+    private void DisplayHelloWorldRPC(string data, string caller)
+    {
+        if (hellowWorldText != null)
+        {
+            hellowWorldText.text = data;
+            StartCoroutine(ClearHelloWorldAfterDelay(3f));
+        }
+    }
+
+    private System.Collections.IEnumerator ClearHelloWorldAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (hellowWorldText != null)
+        {
+            hellowWorldText.text = "";
+        }
+    }
+
+    private void SendplayerRPCData()
+    {
+        playerRPCClass playerRPCData = new()
+        {
+            playerRPCScore = 42,
+            playerRPCString = "This is a playerRPC string!",
+            someList = new List<string> { "Item1", "Item2", "Item3" }
+        };
+
+        Debug.Log($"Sending playerRPC Data: {playerRPCData}");
+
+        _playroomKit.RpcCall("ReceiveplayerRPCData", playerRPCData, PlayroomKit.RpcMode.ALL, () =>
+        {
+            Debug.Log("RPC call to send playerRPC data sent successfully.");
+        });
+    }
+
+    private void ReceiveplayerRPCData(string jsonData)
+    {
+        Debug.Log($"Received playerRPC Data: {jsonData}");
+        try
+        {
+            playerRPCClass receivedData = JsonUtility.FromJson<playerRPCClass>(jsonData);
+            if (receivedData != null)
+            {
+                Debug.Log($"Received playerRPC Score: {receivedData.playerRPCScore}");
+                Debug.Log($"Received playerRPC String: {receivedData.playerRPCString}");
+                Debug.Log($"Received List Count: {receivedData.someList?.Count ?? 0}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error deserializing playerRPC data: {ex.Message}");
+        }
+    }
+
+    private void TestDataRPC(string data, string caller)
+    {
+    Debug.Log($"Test Data RPC called by {caller} with data: {data}");
+    try
+    {
+        var receivedData = JsonUtility.FromJson<TestData>(data);
+        Debug.Log($"[Data Test] Message: {receivedData.message}");
+        Debug.Log($"[Data Test] PlayerID: {receivedData.playerID}");
+        Debug.Log($"[Data Test] Random: {receivedData.randomNumber}");
+        Debug.Log($"[Data Test] Nested: {receivedData.nested.inner}");
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"Error deserializing dictionary data: {ex.Message}");
+    }
+    }
+    private void TestDictionaryRPC(string data, string caller ){
+        Debug.Log($"Test Dictionary RPC called by {caller}with data : {data}") ; 
+        try 
+        {
+            var jsonNode = SimpleJSON.JSON.Parse(data);
+            Debug.Log($"[Dictionary Test] Message: {jsonNode["message"]}");
+            Debug.Log($"[Dictionary Test] PlayerID: {jsonNode["playerID"]}");
+            Debug.Log($"[Dictionary Test] Random: {jsonNode["randomNumber"]}");
+            Debug.Log($"[Dictionary Test] Nested: {jsonNode["nested"]["inner"]}");    
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error Deserializing Dictionarydata :{ex.Message}");
+        }
+        }
 }
 
+[System.Serializable]
+public class playerRPCClass
+{
+    public int playerRPCScore;
+    public string playerRPCString;
+    public List<string> someList;
+}
