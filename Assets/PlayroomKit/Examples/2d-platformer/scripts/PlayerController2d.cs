@@ -4,64 +4,86 @@ using TMPro;
 public class PlayerController2d : MonoBehaviour
 {
     [SerializeField] float moveSpeed = 5f;
+    [SerializeField] float shootSpeed = 50f;
     [SerializeField] private float jumpAmount = 15f;
 
     [SerializeField] private Rigidbody2D rb2D;
-    [SerializeField] private bool isJumping;
+    [SerializeField] private bool isGrounded;
 
-    [SerializeField] private bool isMoving;
 
     [SerializeField] private GameObject bulletPrefab;
     public TextMeshProUGUI scoreText;
 
 
     public float dirX;
+    private float lastNonZeroDirX = 1f;
+    public float FacingDir => lastNonZeroDirX;
 
-    public void Move()
+    public bool Move()
     {
         dirX = Input.GetAxisRaw("Horizontal");
-        transform.Translate(new Vector3(dirX, 0, 0) * (moveSpeed * Time.deltaTime));
-        isMoving = Mathf.Abs(dirX) > 0;
-    }
-
-
-    public int ShootBullet(Vector3 position, float speed, int score)
-    {
-        if (isMoving)
+        if (Mathf.Abs(dirX) > 0.01f)
         {
-            score += 10;
-            GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.identity);
-
-            Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
-            if (bulletRb != null)
-            {
-                bulletRb.AddForce(new Vector3(dirX, 0, 0) * speed, ForceMode2D.Impulse);
-            }
-            else
-            {
-                Debug.LogWarning("Bullet prefab does not have a Rigidbody2D component.");
-            }
-            Destroy(bullet, 2f);
-
-            return score;
+            lastNonZeroDirX = Mathf.Sign(dirX);
+            ApplyFacing(lastNonZeroDirX);
         }
-        return score;   
+
+        if (rb2D != null)
+        {
+            var velocity = rb2D.velocity;
+            rb2D.velocity = new Vector2(dirX * moveSpeed, velocity.y);
+        }
+        return Mathf.Abs(dirX) > 0;
     }
 
-    public void Jump()
+
+    public void ShootBullet(Vector3 position, float direction)
     {
-        if (Input.GetKeyDown(KeyCode.W) && isJumping)
+        GameObject bullet = Instantiate(bulletPrefab, position, Quaternion.identity);
+
+        Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
+        if (bulletRb != null)
+        {
+            var shootDir = Mathf.Abs(direction) > 0.01f ? Mathf.Sign(direction) : lastNonZeroDirX;
+            bulletRb.AddForce(new Vector2(shootDir, 0) * shootSpeed, ForceMode2D.Impulse);
+        }
+        else
+        {
+            Debug.LogWarning("Bullet prefab does not have a Rigidbody2D component.");
+        }
+        Destroy(bullet, 2f);
+
+    }
+
+    public bool Jump()
+    {
+        if (Input.GetKeyDown(KeyCode.W) && isGrounded && rb2D != null)
         {
             rb2D.AddForce(transform.up * jumpAmount, ForceMode2D.Impulse);
-            isJumping = false;
+            isGrounded = false;
+            return true;
         }
+        return false;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
         {
-            isJumping = true;
+            isGrounded = true;
         }
+    }
+
+    public void ApplyFacing(float direction)
+    {
+        if (Mathf.Abs(direction) <= 0.01f)
+        {
+            return;
+        }
+
+        lastNonZeroDirX = Mathf.Sign(direction);
+        var localScale = transform.localScale;
+        localScale.x = Mathf.Abs(localScale.x) * lastNonZeroDirX;
+        transform.localScale = localScale;
     }
 }

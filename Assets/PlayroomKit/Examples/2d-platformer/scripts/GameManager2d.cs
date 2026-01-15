@@ -1,20 +1,16 @@
-using System;
-using System.Collections.Generic;
 using Playroom;
-using UnityEngine;
-using Random = UnityEngine.Random;
-using Debug = UnityEngine.Debug;
+using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Random = UnityEngine.Random;
 
 
 public class GameManager2d : MonoBehaviour
 {
     [SerializeField]
     private GameObject playerPrefab;
-
-    [SerializeField]
-    private string roomCode;
-
 
     /// <summary>
     /// player scores and UI to display score of the game.
@@ -23,25 +19,20 @@ public class GameManager2d : MonoBehaviour
     [SerializeField]
     private int score = 0;
     [SerializeField]
-    private TextMeshProUGUI scoreTextPlayer1;
+    private TextMeshProUGUI playerCount;
     [SerializeField]
-    private TextMeshProUGUI scoreTextPlayer2;
-
-    private TextMeshProUGUI selectedScoreText;
-
+    private TextMeshProUGUI scoreTemplate;
+    [SerializeField]
+    private Transform scoreList;
 
     private static bool playerJoined;
 
     /// <summary>
     /// List of players and their gameObjects.
     /// </summary>
-    private static readonly List<PlayroomKit.Player> players = new();
-    private static readonly List<GameObject> playerGameObjects = new();
-    private static Dictionary<string, GameObject> PlayerDict = new();
+    private static readonly Dictionary<string, PlayerEntity> players = new();
 
     private PlayroomKit _playroomKit;
-    [SerializeField]
-    private string newData;
 
 
     void Awake()
@@ -56,7 +47,7 @@ public class GameManager2d : MonoBehaviour
     {
         _playroomKit.InsertCoin(new InitOptions()
         {
-            maxPlayersPerRoom = 2,
+            maxPlayersPerRoom = 4,
             defaultPlayerStates = new()
             {
                 { "score", 0 },
@@ -69,6 +60,8 @@ public class GameManager2d : MonoBehaviour
         {
             Debug.LogWarning("OnDisconnect Callback Called");
         });
+
+        scoreTemplate.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -80,6 +73,7 @@ public class GameManager2d : MonoBehaviour
 
         _playroomKit.RpcRegister("ShootBullet", HandleScoreUpdate, "You shot a bullet!");
         _playroomKit.WaitForState("test", (s) => { Debug.LogWarning($"After waiting for test: {s}"); });
+
     }
 
     /// <summary>
@@ -90,12 +84,23 @@ public class GameManager2d : MonoBehaviour
         var player = _playroomKit.GetPlayer(caller);
         Debug.Log($"Caller: {caller}, Player Name: {player?.GetProfile().name}, Data: {data}");
 
-        if (PlayerDict.TryGetValue(caller, out GameObject playerObj))
+        if (players.TryGetValue(caller, out PlayerEntity playerEntity))
         {
-            var playerController = playerObj.GetComponent<PlayerController2d>();
+            var playerController = playerEntity.Controller;
             if (playerController != null)
             {
-                playerController.scoreText.text = $"Score: {data}";
+                if (TryParseShootPayload(data, out int parsedScore, out Vector3 shootPos, out float shootDir))
+                {
+                    if (_playroomKit.MyPlayer() == null || _playroomKit.MyPlayer().id != caller)
+                    {
+                        playerController.ShootBullet(shootPos, shootDir);
+                    }
+                    playerEntity.UpdateScoreText(parsedScore);
+                }
+                else
+                {
+                    Debug.LogError($"Unable to parse score data for player: {caller}");
+                }
             }
             else
             {
@@ -113,29 +118,47 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        if (playerJoined)
+        if (playerJoined && _playroomKit.MyPlayer() != null)
         {
-            var myPlayer = _playroomKit.MyPlayer();
-            var index = players.IndexOf(myPlayer);
+            var myPlayerId = _playroomKit.MyPlayer().id;
 
-            playerGameObjects[index].GetComponent<PlayerController2d>().Move();
-            playerGameObjects[index].GetComponent<PlayerController2d>().Jump();
+            if (players.TryGetValue(myPlayerId, out PlayerEntity myPlayerEntity) && myPlayerEntity.GameObject != null)
+            {   
+                myPlayerEntity.Controller.Move();
+                myPlayerEntity.Controller.Jump();
+                myPlayerEntity.Player.SetState("pos", myPlayerEntity.GameObject.transform.position);
+                myPlayerEntity.Player.SetState("facing", myPlayerEntity.Controller.FacingDir);
 
-            players[index].SetState("pos", playerGameObjects[index].transform.position);
-            ShootBullet(index);
-
-            for (var i = 0; i < players.Count; i++)
-            {
-                if (players[i] != null && PlayerDict.TryGetValue(players[i].id, out GameObject playerObj))
+                if (Input.GetKeyDown(KeyCode.Space))
                 {
-                    var pos = players[i].GetState<Vector3>("pos");
-                    var color = players[i].GetState<Color>("color");
-                    if (playerGameObjects != null)
-                    {
-                        playerGameObjects[i].GetComponent<Transform>().position = pos;
-                        playerGameObjects[i].GetComponent<SpriteRenderer>().color = color;
-                    }
+                    ShootBullet(myPlayerEntity);
                 }
+
+                foreach (var playerEntry in players)
+                {
+                    if (playerEntry.Key == myPlayerId) continue;
+
+                    var playerEntity = playerEntry.Value;
+
+                    if (playerEntity.Player != null && playerEntity.GameObject != null)
+                    {
+                        var pos = playerEntity.Player.GetState<Vector3>("pos");
+                        playerEntity.GameObject.transform.position = pos;
+
+                        var facing = playerEntity.Player.GetState<float>("facing");
+                        playerEntity.Controller.ApplyFacing(facing);
+
+                    }
+                    else
+                    {
+                        Debug.LogError($"PlayerEntity not found for player: {playerEntry.Key}");
+                    }
+
+                }
+            }
+            else
+            {
+                Debug.LogError($"No PlayerEntity found for my player ID: {myPlayerId}");
             }
         }
     }
@@ -144,18 +167,20 @@ public class GameManager2d : MonoBehaviour
     /// <summary>
     /// Shoot bullet and update the score.
     /// </summary>
-    private void ShootBullet(int playerIndex)
+    private void ShootBullet(PlayerEntity playerEntity)
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Vector3 playerPosition = playerGameObjects[playerIndex].transform.position;
+        Vector3 playerPosition = playerEntity.GameObject.transform.position;
+        float shootDir = playerEntity.Controller.FacingDir;
 
-            score = playerGameObjects[playerIndex].GetComponent<PlayerController2d>()
-                .ShootBullet(playerPosition, 50f, score);
+        playerEntity.Controller.ShootBullet(playerPosition, shootDir);
+        score += 10;
+        
+        playerEntity.Player.SetState("score", score);
 
-            _playroomKit.RpcCall("ShootBullet", score, PlayroomKit.RpcMode.ALL,
-                () => { Debug.Log("Shooting bullet"); });
-        }
+        var payload = SerializeShootPayload(score, playerPosition, shootDir);
+        _playroomKit.RpcCall("ShootBullet", payload, PlayroomKit.RpcMode.ALL,
+            () => { Debug.Log("Shooting bullet"); });
+
     }
 
     /// <summary>
@@ -163,38 +188,166 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     public void AddPlayer(PlayroomKit.Player player)
     {
-        var spawnPos = new Vector3(Random.Range(-4, 4), Random.Range(1, 5), 0);
+        if (players.ContainsKey(player.id))
+        {
+            Debug.LogWarning($"Player {player.id} already exists in the game.");
+            return;
+        }
+
+        Vector3 spawnPos;
+        if (_playroomKit.MyPlayer() != null && player.id == _playroomKit.MyPlayer().id)
+        {
+            spawnPos = new Vector3(Random.Range(-4, 4), Random.Range(1, 5), 0);
+            player.SetState("facing", 1f);
+            player.SetState("pos", spawnPos);
+            InstantiatePlayer(player, spawnPos);
+
+        }
+        else
+        {
+            player.WaitForState("pos", response =>
+            {
+                var pos = player.GetState<Vector3>("pos");
+                spawnPos = pos;
+                InstantiatePlayer(player, spawnPos);
+                Debug.Log($"Player {player.id} joined.");
+            });
+        }
+    }
+
+    private void InstantiatePlayer(PlayroomKit.Player player, Vector3 spawnPos)
+    {
         GameObject playerObj = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+        var scoreObj = Instantiate(scoreTemplate, scoreList);
 
-        player.SetState("color", player.GetProfile().color);
+        scoreObj.text = $"{player.GetProfile().name}: {player.GetState<int>("score")}";
 
-        PlayerDict.Add(player.id, playerObj);
-        players.Add(player);
-        playerGameObjects.Add(playerObj);
-
-        selectedScoreText = (players.Count == 1) ? scoreTextPlayer1 : scoreTextPlayer2;
-        playerObj.GetComponent<PlayerController2d>().scoreText = selectedScoreText;
+        var playerEntity = new PlayerEntity(player, playerObj, scoreObj);
+        players.Add(player.id, playerEntity);
 
         playerJoined = true;
         player.OnQuit(RemovePlayer);
+
+        UpdatePlayerCount();
     }
 
     /// <summary>
     /// Remove player from the game, called when the player leaves / closes the game.
     /// </summary>
-    private static void RemovePlayer(string playerID)
+    private void RemovePlayer(string playerID)
     {
-        if (PlayerDict.TryGetValue(playerID, out GameObject player))
+        if (players.TryGetValue(playerID, out PlayerEntity playerEntity))
         {
-            PlayerDict.Remove(playerID);
-            players.Remove(players.Find(p => p.id == playerID));
-            playerGameObjects.Remove(player);
-            Destroy(player);
+            players.Remove(playerID);
+            playerEntity.DestroyObjects();
+            UpdatePlayerCount();
+            
+            Debug.Log($"Player {playerID} removed successfully.");
         }
         else
         {
-            Debug.LogWarning("Player is not in dictionary");
+            Debug.LogWarning($"Player {playerID} is not in dictionary.");
         }
+    }
+
+    private void UpdatePlayerCount()
+    {
+        playerCount.text = $"Players: {players.Count}";
+    }
+
+    private sealed class PlayerEntity
+    {
+        public PlayroomKit.Player Player { get; }
+        public GameObject GameObject { get; }
+        public PlayerController2d Controller { get; }
+        public SpriteRenderer SpriteRenderer { get; }
+
+        public PlayerEntity(PlayroomKit.Player player, GameObject gameObject, TextMeshProUGUI scoreObject)
+        {
+            Player = player;
+            GameObject = gameObject;
+            scoreObject.gameObject.SetActive(true);
+            Controller = gameObject.GetComponent<PlayerController2d>();
+            SpriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+
+            var color = player.GetProfile().color;
+
+            SpriteRenderer.color = color;
+            scoreObject.color = color;
+
+            gameObject.GetComponent<PlayerController2d>().scoreText = scoreObject;
+
+        }
+
+        public void UpdateScoreText(int score)
+        {
+            if (Controller != null && Controller.scoreText != null && Player != null && Player.GetProfile() != null)
+            {
+                Controller.scoreText.text = $"{Player.GetProfile().name}: {score}";
+            }
+        }
+
+        public void DestroyObjects()
+        {
+            Destroy(Controller.scoreText.gameObject);
+            Destroy(GameObject);
+        }
+    }
+
+    private static string SerializeShootPayload(int scoreValue, Vector3 position, float direction)
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}|{1},{2},{3}|{4}",
+            scoreValue,
+            position.x,
+            position.y,
+            position.z,
+            direction);
+    }
+
+    private static bool TryParseShootPayload(string data, out int scoreValue, out Vector3 position, out float direction)
+    {
+        scoreValue = 0;
+        position = Vector3.zero;
+        direction = 1f;
+
+        if (string.IsNullOrWhiteSpace(data))
+        {
+            return false;
+        }
+
+        var parts = data.Split('|');
+        if (parts.Length != 3)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out scoreValue))
+        {
+            return false;
+        }
+
+        var posParts = parts[1].Split(',');
+        if (posParts.Length != 3)
+        {
+            return false;
+        }
+
+        if (!float.TryParse(posParts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) ||
+            !float.TryParse(posParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y) ||
+            !float.TryParse(posParts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
+        {
+            return false;
+        }
+
+        if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out direction))
+        {
+            return false;
+        }
+
+        position = new Vector3(x, y, z);
+        return true;
     }
 }
 
