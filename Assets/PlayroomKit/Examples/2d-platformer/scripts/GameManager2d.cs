@@ -1,6 +1,5 @@
 using Playroom;
 using System.Collections.Generic;
-using System.Globalization;
 using TMPro;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -25,12 +24,12 @@ public class GameManager2d : MonoBehaviour
     [SerializeField]
     private Transform scoreList;
 
-    private static bool playerJoined;
+    private bool playersJoined;
 
     /// <summary>
     /// List of players and their gameObjects.
     /// </summary>
-    private static readonly Dictionary<string, PlayerEntity> players = new();
+    private readonly Dictionary<string, PlayerEntity> players = new();
 
     private PlayroomKit _playroomKit;
 
@@ -45,24 +44,29 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     private void Initialize()
     {
-        _playroomKit.InsertCoin(new InitOptions()
-        {
-            maxPlayersPerRoom = 4,
-            defaultPlayerStates = new()
+        _playroomKit.InsertCoin(
+            new InitOptions
             {
-                { "score", 0 },
+                maxPlayersPerRoom = 4,
+                defaultPlayerStates = new()
+                {
+                    { "score", 0 }
+                }
             },
-        }, () =>
-        {
-            _playroomKit.OnPlayerJoin(AddPlayer);
-            Debug.Log($"[Unity Log] isHost: {_playroomKit.IsHost()}");
-        }, () =>
-        {
-            Debug.LogWarning("OnDisconnect Callback Called");
-        });
+            onLaunchCallBack: () =>
+            {
+                _playroomKit.OnPlayerJoin(AddPlayer);
+                Debug.Log($"[Unity Log] isHost: {_playroomKit.IsHost()}");
+            },
+            onDisconnectCallback: () =>
+            {
+                Debug.LogWarning("OnDisconnect Callback Called");
+            }
+        );
 
         scoreTemplate.gameObject.SetActive(false);
     }
+
 
     /// <summary>
     /// Register the RPC method to update the score.
@@ -71,8 +75,7 @@ public class GameManager2d : MonoBehaviour
     {
         Initialize();
 
-        _playroomKit.RpcRegister("ShootBullet", HandleScoreUpdate, "You shot a bullet!");
-        _playroomKit.WaitForState("test", (s) => { Debug.LogWarning($"After waiting for test: {s}"); });
+        _playroomKit.RpcRegister("ShootBullet", HandleScoreUpdate, "Bullet Shot!");
 
     }
 
@@ -81,35 +84,25 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     void HandleScoreUpdate(string data, string caller)
     {
-        var player = _playroomKit.GetPlayer(caller);
-        Debug.Log($"Caller: {caller}, Player Name: {player?.GetProfile().name}, Data: {data}");
-
         if (players.TryGetValue(caller, out PlayerEntity playerEntity))
         {
-            var playerController = playerEntity.Controller;
-            if (playerController != null)
+            Debug.Log($"Caller: {caller}, Player Name: {playerEntity.Player?.GetProfile().name}, Data: {data}");
+
+            if (!int.TryParse(data, out int parsedScore))
             {
-                if (TryParseShootPayload(data, out int parsedScore, out Vector3 shootPos, out float shootDir))
-                {
-                    if (_playroomKit.MyPlayer() == null || _playroomKit.MyPlayer().id != caller)
-                    {
-                        playerController.ShootBullet(shootPos, shootDir);
-                    }
-                    playerEntity.UpdateScoreText(parsedScore);
-                }
-                else
-                {
-                    Debug.LogError($"Unable to parse score data for player: {caller}");
-                }
+                Debug.LogError($"Failed to parse score data: {data}");
+                return;
             }
-            else
+            if (!playerEntity.IsMyPlayer)
             {
-                Debug.LogError($"PlayerController not found on GameObject for caller: {caller}");
+                playerEntity.Controller.ShootBullet();
             }
+
+            playerEntity.UpdateScoreText(parsedScore);
         }
         else
         {
-            Debug.LogError($"No GameObject found for caller: {caller}");
+            Debug.LogError($"No PlayerEntity found for caller: {caller}");
         }
     }
 
@@ -118,12 +111,12 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        if (playerJoined && _playroomKit.MyPlayer() != null)
+        if (playersJoined && _playroomKit.MyPlayer() != null)
         {
             var myPlayerId = _playroomKit.MyPlayer().id;
 
-            if (players.TryGetValue(myPlayerId, out PlayerEntity myPlayerEntity) && myPlayerEntity.GameObject != null)
-            {   
+            if (players.TryGetValue(myPlayerId, out PlayerEntity myPlayerEntity))
+            {
                 myPlayerEntity.Controller.Move();
                 myPlayerEntity.Controller.Jump();
                 myPlayerEntity.Player.SetState("pos", myPlayerEntity.GameObject.transform.position);
@@ -134,32 +127,34 @@ public class GameManager2d : MonoBehaviour
                     ShootBullet(myPlayerEntity);
                 }
 
-                foreach (var playerEntry in players)
-                {
-                    if (playerEntry.Key == myPlayerId) continue;
-
-                    var playerEntity = playerEntry.Value;
-
-                    if (playerEntity.Player != null && playerEntity.GameObject != null)
-                    {
-                        var pos = playerEntity.Player.GetState<Vector3>("pos");
-                        playerEntity.GameObject.transform.position = pos;
-
-                        var facing = playerEntity.Player.GetState<float>("facing");
-                        playerEntity.Controller.ApplyFacing(facing);
-
-                    }
-                    else
-                    {
-                        Debug.LogError($"PlayerEntity not found for player: {playerEntry.Key}");
-                    }
-
-                }
+                UpdateRemotePlayers();
             }
             else
             {
                 Debug.LogError($"No PlayerEntity found for my player ID: {myPlayerId}");
             }
+        }
+    }
+
+    private void UpdateRemotePlayers()
+    {
+        foreach (var playerEntry in players)
+        {
+            var playerEntity = playerEntry.Value;
+
+            if (playerEntity.IsMyPlayer) continue;
+
+            if (playerEntity.Player != null && playerEntity.GameObject != null)
+            {
+                var pos = playerEntity.Player.GetState<Vector3>("pos");
+                var facing = playerEntity.Player.GetState<float>("facing");
+                playerEntity.Controller.ApplyRemoteState(pos, facing);
+            }
+            else
+            {
+                Debug.LogError($"PlayerEntity not found for player: {playerEntry.Key}");
+            }
+
         }
     }
 
@@ -169,16 +164,12 @@ public class GameManager2d : MonoBehaviour
     /// </summary>
     private void ShootBullet(PlayerEntity playerEntity)
     {
-        Vector3 playerPosition = playerEntity.GameObject.transform.position;
-        float shootDir = playerEntity.Controller.FacingDir;
-
-        playerEntity.Controller.ShootBullet(playerPosition, shootDir);
+        playerEntity.Controller.ShootBullet();
         score += 10;
-        
+
         playerEntity.Player.SetState("score", score);
 
-        var payload = SerializeShootPayload(score, playerPosition, shootDir);
-        _playroomKit.RpcCall("ShootBullet", payload, PlayroomKit.RpcMode.ALL,
+        _playroomKit.RpcCall("ShootBullet", score, PlayroomKit.RpcMode.ALL,
             () => { Debug.Log("Shooting bullet"); });
 
     }
@@ -200,8 +191,7 @@ public class GameManager2d : MonoBehaviour
             spawnPos = new Vector3(Random.Range(-4, 4), Random.Range(1, 5), 0);
             player.SetState("facing", 1f);
             player.SetState("pos", spawnPos);
-            InstantiatePlayer(player, spawnPos);
-
+            SetupPlayerEntity(player, spawnPos, true);
         }
         else
         {
@@ -209,23 +199,22 @@ public class GameManager2d : MonoBehaviour
             {
                 var pos = player.GetState<Vector3>("pos");
                 spawnPos = pos;
-                InstantiatePlayer(player, spawnPos);
+                SetupPlayerEntity(player, spawnPos, false);
                 Debug.Log($"Player {player.id} joined.");
             });
         }
     }
 
-    private void InstantiatePlayer(PlayroomKit.Player player, Vector3 spawnPos)
+    private void SetupPlayerEntity(PlayroomKit.Player player, Vector3 spawnPos, bool isMyPlayer)
     {
         GameObject playerObj = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
         var scoreObj = Instantiate(scoreTemplate, scoreList);
 
         scoreObj.text = $"{player.GetProfile().name}: {player.GetState<int>("score")}";
 
-        var playerEntity = new PlayerEntity(player, playerObj, scoreObj);
+        var playerEntity = new PlayerEntity(player, playerObj, scoreObj, isMyPlayer);
         players.Add(player.id, playerEntity);
 
-        playerJoined = true;
         player.OnQuit(RemovePlayer);
 
         UpdatePlayerCount();
@@ -241,7 +230,7 @@ public class GameManager2d : MonoBehaviour
             players.Remove(playerID);
             playerEntity.DestroyObjects();
             UpdatePlayerCount();
-            
+
             Debug.Log($"Player {playerID} removed successfully.");
         }
         else
@@ -253,6 +242,7 @@ public class GameManager2d : MonoBehaviour
     private void UpdatePlayerCount()
     {
         playerCount.text = $"Players: {players.Count}";
+        playersJoined = players.Count > 0;
     }
 
     private sealed class PlayerEntity
@@ -261,11 +251,13 @@ public class GameManager2d : MonoBehaviour
         public GameObject GameObject { get; }
         public PlayerController2d Controller { get; }
         public SpriteRenderer SpriteRenderer { get; }
+        public bool IsMyPlayer { get; }
 
-        public PlayerEntity(PlayroomKit.Player player, GameObject gameObject, TextMeshProUGUI scoreObject)
+        public PlayerEntity(PlayroomKit.Player player, GameObject gameObject, TextMeshProUGUI scoreObject, bool isMyPlayer)
         {
             Player = player;
             GameObject = gameObject;
+            IsMyPlayer = isMyPlayer;
             scoreObject.gameObject.SetActive(true);
             Controller = gameObject.GetComponent<PlayerController2d>();
             SpriteRenderer = gameObject.GetComponent<SpriteRenderer>();
@@ -275,7 +267,7 @@ public class GameManager2d : MonoBehaviour
             SpriteRenderer.color = color;
             scoreObject.color = color;
 
-            gameObject.GetComponent<PlayerController2d>().scoreText = scoreObject;
+            Controller.scoreText = scoreObject;
 
         }
 
@@ -294,60 +286,5 @@ public class GameManager2d : MonoBehaviour
         }
     }
 
-    private static string SerializeShootPayload(int scoreValue, Vector3 position, float direction)
-    {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            "{0}|{1},{2},{3}|{4}",
-            scoreValue,
-            position.x,
-            position.y,
-            position.z,
-            direction);
-    }
-
-    private static bool TryParseShootPayload(string data, out int scoreValue, out Vector3 position, out float direction)
-    {
-        scoreValue = 0;
-        position = Vector3.zero;
-        direction = 1f;
-
-        if (string.IsNullOrWhiteSpace(data))
-        {
-            return false;
-        }
-
-        var parts = data.Split('|');
-        if (parts.Length != 3)
-        {
-            return false;
-        }
-
-        if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out scoreValue))
-        {
-            return false;
-        }
-
-        var posParts = parts[1].Split(',');
-        if (posParts.Length != 3)
-        {
-            return false;
-        }
-
-        if (!float.TryParse(posParts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) ||
-            !float.TryParse(posParts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y) ||
-            !float.TryParse(posParts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
-        {
-            return false;
-        }
-
-        if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out direction))
-        {
-            return false;
-        }
-
-        position = new Vector3(x, y, z);
-        return true;
-    }
 }
 

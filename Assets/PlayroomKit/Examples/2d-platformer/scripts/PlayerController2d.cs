@@ -36,6 +36,10 @@ public class PlayerController2d : MonoBehaviour
         return Mathf.Abs(dirX) > 0;
     }
 
+    public void ShootBullet()
+    {
+        ShootBullet(transform.position, lastNonZeroDirX);
+    }
 
     public void ShootBullet(Vector3 position, float direction)
     {
@@ -85,5 +89,11 @@ public class PlayerController2d : MonoBehaviour
         var localScale = transform.localScale;
         localScale.x = Mathf.Abs(localScale.x) * lastNonZeroDirX;
         transform.localScale = localScale;
+    }
+
+    public void ApplyRemoteState(Vector3 position, float facing)
+    {
+        transform.position = position;
+        ApplyFacing(facing);
     }
 }
