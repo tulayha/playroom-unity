@@ -1,10 +1,8 @@
+using AOT;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using UnityEngine;
-using System.Runtime.InteropServices;
-using AOT;
 
 namespace Playroom
 {
@@ -218,9 +216,10 @@ namespace Playroom
                     IPlayerBase.onKickCallBack?.Invoke();
                 }
 
-                [MonoPInvokeCallback(typeof(Action))]
+                [MonoPInvokeCallback(typeof(Action<string>))]
                 public void OnQuitWrapperCallback(string id)
                 {
+                    Players.Remove(id);
                     if (OnQuitCallbacks != null)
                         foreach (var callback in OnQuitCallbacks)
                             callback?.Invoke(id);
