@@ -326,20 +326,56 @@ public class PlayroomKitTests
     }
 
     // TODO: out of sync, needs to be updated for callback signature change
-    //[Test]
-    //public void WaitForPlayerState_ShouldInvokeInternal_WhenCalled()
-    //{
-    //    void Callback(string data)
-    //    {
-    //        Debug.Log($"Callback called!: " + data);
-    //    }
+    [Test]
+    public void WaitForPlayerState_ShouldInvokeInternal_WhenCalled()
+    {
+        // Arrange
+        string callbackId = null;
+        string receivedData = null;
+        string testData = "TestStateData";
 
-    //    var playerId = "1234";
-    //    var state = "state";
+        Action<string> onStateSetCallback = (data) =>
+        {
+            receivedData = data;
+        };
 
-    //    _playroomKit.WaitForPlayerState(playerId, state, Callback);
-    //    _interop.Received(1).WaitForPlayerStateWrapper(playerId, state, Arg.Any<Action<string>>());
-    //}
+        Action<string, string> internalCallback = null;
+
+        var playerId = "1234";
+        var state = "state";
+
+        // Set up the mock to capture the callback and callbackId when WaitForPlayerStateWrapper is called
+        _interop.When(x => x.WaitForPlayerStateWrapper(
+                Arg.Any<string>(), // id
+                Arg.Any<string>(), // stateKey
+                Arg.Any<Action<string, string>>(), // callback
+                Arg.Any<string>() // callbackId
+            ))
+            .Do(callInfo =>
+            {
+                // Capture the callback and callbackId for later use
+                internalCallback = callInfo.ArgAt<Action<string, string>>(2);
+                callbackId = callInfo.ArgAt<string>(3);
+            });
+
+
+        // Act
+        _playroomKit.WaitForPlayerState(playerId, state, onStateSetCallback);
+        
+        // Capture internal callback and callbackId from wrapper
+        _interop.Received(1).WaitForPlayerStateWrapper(
+            playerId, 
+            state,
+            Arg.Any<Action<string, string>>(),
+            Arg.Any<string>()
+            );
+        
+        // Simulate invoking the callback from the interop layer
+        internalCallback?.Invoke(testData, callbackId);
+
+        //Assert
+        Assert.AreEqual(testData, receivedData, "Expected the received data to match the test data.");
+    }
 
     [Test]
     public void ResetStates_ShouldInvokeInternal_WhenCalled()

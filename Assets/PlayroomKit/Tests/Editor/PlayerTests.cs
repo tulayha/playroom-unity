@@ -253,18 +253,51 @@ namespace Playroom.Tests.Editor
             Assert.IsTrue(callbackInvoked, "Expected the onKickCallback to be invoked.");
         }
 
-        //TODO: out of sync with main code, need to update for callback signature change
-        //[Test]
-        //public void WaitForState_WhenInitialized_CallsWaitForPlayerStateWrapperWithCorrectParameters()
-        //{
-        //    // Arrange
-        //    Action<string> onStateSetCallback = (data) => { Debug.Log("data: " + data); };
+        [Test]
+        public void WaitForState_WhenInitialized_CallsWaitForPlayerStateWrapperWithCorrectParameters()
+        {
+            // Arrange
+            string callbackId = null;
+            string receivedData = null;
+            string testData = "TestStateData";
 
-        //    // Act
-        //    _player.WaitForState(testKey, onStateSetCallback);
+            Action<string> onStateSetCallback = (data) =>
+            {
+                receivedData = data;
+            };
 
-        //    // Assert
-        //    _interop.Received(1).WaitForPlayerStateWrapper(testId, testKey, onStateSetCallback);
-        //}
+            Action<string, string> internalCallback = null;
+
+            // Set up the mock to capture the callback and callbackId when WaitForPlayerStateWrapper is called
+            _interop.When(x => x.WaitForPlayerStateWrapper(
+                    Arg.Any<string>(), // id
+                    Arg.Any<string>(), // stateKey
+                    Arg.Any<Action<string, string>>(), // callback
+                    Arg.Any<string>() // callbackId
+                ))
+                .Do(callInfo =>
+                {
+                    // Capture the callback and callbackId for later use
+                    internalCallback = callInfo.ArgAt<Action<string, string>>(2);
+                    callbackId = callInfo.ArgAt<string>(3);
+                });
+
+            // Act
+            _player.WaitForState(testKey, onStateSetCallback);
+
+            // Capture internal callback and callbackId from wrapper
+            _interop.Received(1).WaitForPlayerStateWrapper(
+                testId,
+                testKey,
+                Arg.Any<Action<string, string>>(),
+                Arg.Any<string>()
+                );
+
+            // Simulate invoking the callback from the interop layer
+            internalCallback?.Invoke(testData, callbackId);
+
+            //Assert
+            Assert.AreEqual(testData, receivedData, "Expected the received data to match the test data.");
+        }
     }
 }
