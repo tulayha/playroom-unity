@@ -302,12 +302,10 @@ namespace Playroom
                 _interop.WaitForStateWrapper(stateKey, IPlayroomBase.InvokeCallback);
             }
 
-            Action<string> WaitForPlayerCallback = null;
-
             public void WaitForPlayerState(string playerID, string stateKey, Action<string> onStateSetCallback = null)
             {
-                WaitForPlayerCallback = onStateSetCallback;
-                _interop.WaitForPlayerStateWrapper(playerID, stateKey, OnStateSetCallback);
+               string callbackID = CallbackManager.RegisterCallback(onStateSetCallback);
+                _interop.WaitForPlayerStateWrapper(playerID, stateKey, OnStateSetCallback, callbackID);
             }
 
             public void ResetStates(string[] keysToExclude = null, Action onStatesReset = null)
@@ -576,10 +574,10 @@ namespace Playroom
 #endif
             }
 
-            [MonoPInvokeCallback(typeof(Action<string>))]
-            void OnStateSetCallback(string data)
+            [MonoPInvokeCallback(typeof(Action<string, string>))]
+            void OnStateSetCallback(string data, string callbackId)
             {
-                WaitForPlayerCallback?.Invoke(data);
+                CallbackManager.InvokeCallback(callbackId, data);
             }
 
             [MonoPInvokeCallback(typeof(Action))]

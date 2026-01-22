@@ -93,7 +93,8 @@ namespace Playroom
 
         [DllImport("__Internal")]
         private static extern void WaitForPlayerStateInternal(string playerID, string stateKey,
-            Action<string> onStateSetCallback = null);
+            Action<string, string> onStateSetCallback, string callbackID);
+        
 
         [DllImport("__Internal")]
         private static extern string GetPlayroomTokenInternal();
