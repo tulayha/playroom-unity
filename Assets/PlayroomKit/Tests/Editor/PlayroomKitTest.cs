@@ -325,7 +325,6 @@ public class PlayroomKitTests
         _interop.Received(1).WaitForStateWrapper("state", Arg.Any<Action<string, string>>());
     }
 
-    // TODO: out of sync, needs to be updated for callback signature change
     [Test]
     public void WaitForPlayerState_ShouldInvokeInternal_WhenCalled()
     {
