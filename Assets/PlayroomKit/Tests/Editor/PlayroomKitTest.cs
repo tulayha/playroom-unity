@@ -325,20 +325,55 @@ public class PlayroomKitTests
         _interop.Received(1).WaitForStateWrapper("state", Arg.Any<Action<string, string>>());
     }
 
-
     [Test]
     public void WaitForPlayerState_ShouldInvokeInternal_WhenCalled()
     {
-        void Callback(string data)
+        // Arrange
+        string callbackId = null;
+        string receivedData = null;
+        string testData = "TestStateData";
+
+        Action<string> onStateSetCallback = (data) =>
         {
-            Debug.Log($"Callback called!: " + data);
-        }
+            receivedData = data;
+        };
+
+        Action<string, string> internalCallback = null;
 
         var playerId = "1234";
         var state = "state";
 
-        _playroomKit.WaitForPlayerState(playerId, state, Callback);
-        _interop.Received(1).WaitForPlayerStateWrapper(playerId, state, Arg.Any<Action<string>>());
+        // Set up the mock to capture the callback and callbackId when WaitForPlayerStateWrapper is called
+        _interop.When(x => x.WaitForPlayerStateWrapper(
+                Arg.Any<string>(), // id
+                Arg.Any<string>(), // stateKey
+                Arg.Any<Action<string, string>>(), // callback
+                Arg.Any<string>() // callbackId
+            ))
+            .Do(callInfo =>
+            {
+                // Capture the callback and callbackId for later use
+                internalCallback = callInfo.ArgAt<Action<string, string>>(2);
+                callbackId = callInfo.ArgAt<string>(3);
+            });
+
+
+        // Act
+        _playroomKit.WaitForPlayerState(playerId, state, onStateSetCallback);
+        
+        // Capture internal callback and callbackId from wrapper
+        _interop.Received(1).WaitForPlayerStateWrapper(
+            playerId, 
+            state,
+            Arg.Any<Action<string, string>>(),
+            Arg.Any<string>()
+            );
+        
+        // Simulate invoking the callback from the interop layer
+        internalCallback?.Invoke(testData, callbackId);
+
+        //Assert
+        Assert.AreEqual(testData, receivedData, "Expected the received data to match the test data.");
     }
 
     [Test]

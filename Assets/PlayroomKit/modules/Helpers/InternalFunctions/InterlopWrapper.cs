@@ -175,9 +175,9 @@ namespace Playroom
 
             // Wrapper for WaitForPlayerStateInternal
             public void WaitForPlayerStateWrapper(string playerID, string stateKey,
-                Action<string> onStateSetCallback = null)
+                Action<string, string> onStateSetCallback, string callbackID)
             {
-                WaitForPlayerStateInternal(playerID, stateKey, onStateSetCallback);
+                WaitForPlayerStateInternal(playerID, stateKey, onStateSetCallback, callbackID);
             }
 
             // Wrapper for SetPlayerStateByPlayerId (int version)
@@ -289,7 +289,6 @@ namespace Playroom
                 OpenDiscordInviteDialogInternal(callback);
             }
 
-           
             #endregion
         }
     }

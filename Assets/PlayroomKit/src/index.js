@@ -758,7 +758,8 @@ mergeInto(LibraryManager.library, {
   WaitForPlayerStateInternal: function (
     playerId,
     stateKey,
-    onStateSetCallback
+    onStateSetCallback,
+    callbackIdPtr
   ) {
     if (!window.Playroom) {
       console.error(
@@ -767,7 +768,7 @@ mergeInto(LibraryManager.library, {
       reject("Playroom library not loaded");
       return;
     }
-
+    const callbackId = UTF8ToString(callbackIdPtr);
     const players = Playroom.Multiplayer().getPlayers()
 
     if (typeof players !== "object" || players === null) {
@@ -784,7 +785,7 @@ mergeInto(LibraryManager.library, {
     stateKey = UTF8ToString(stateKey);
     Playroom.waitForPlayerState(playerState, stateKey)
       .then((stateVal) => {
-        {{{ makeDynCall('vi', 'onStateSetCallback') }}}(stringToNewUTF8(stateVal))
+        {{{ makeDynCall('vii', 'onStateSetCallback') }}}(stringToNewUTF8(stateVal), stringToNewUTF8(callbackId))
       })
       .catch((error) => {
         console.error("Error waiting for state:", error);
