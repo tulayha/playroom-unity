@@ -12,6 +12,15 @@ namespace Playroom
         private static readonly HashSet<string> RegisteredEvents = new();
 
         private static Dictionary<string, List<Action<string, string>>> RpcCallBacks = new();
+        
+        #region Internal for Unit Test TearDown
+        internal static void ClearAllCallbacks()
+        {
+            callbacks.Clear();
+            RpcCallBacks.Clear();
+            RegisteredEvents.Clear();
+        }
+        #endregion
 
         public static void RegisterRpcCallback(Action<string, string> callback, string key = null)
         {

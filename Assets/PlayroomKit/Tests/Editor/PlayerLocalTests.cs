@@ -7,10 +7,9 @@ namespace Playroom.Tests.Editor
 {
     public class PlayerLocalTests
     {
-        private Playroom.PlayroomKit _playroomKit;
-        private Playroom.PlayroomKit.Player _player;
-        private Playroom.PlayroomKit.Player.IPlayerBase _mockPlayerService;
-        private Playroom.PlayroomKit.IInterop _interop;
+        private PlayroomKit _playroomKit;
+        private PlayroomKit.Player _player;
+        private PlayroomKit.Player.IPlayerBase _mockPlayerService;
 
         private string testId = "test_player_id";
 
@@ -18,17 +17,30 @@ namespace Playroom.Tests.Editor
         public void SetUp()
         {
             var _playroomKitService = new LocalMockPlayroomService();
-            _playroomKit = new Playroom.PlayroomKit(_playroomKitService, new Playroom.PlayroomKit.RPCLocal());
+            _playroomKit = new PlayroomKit(_playroomKitService, new PlayroomKit.RPCLocal());
             _playroomKit.InsertCoin(new InitOptions()
             {
                 maxPlayersPerRoom = 2,
                 defaultPlayerStates = new() { { "score", 0 }, },
             }, () => { });
             // Mock the IPlayerService
-            _mockPlayerService = new Playroom.PlayroomKit.Player.LocalPlayerService(testId);
+            _mockPlayerService = new PlayroomKit.Player.LocalPlayerService(testId);
 
             // Create a new Player object with the mock service
-            _player = new Playroom.PlayroomKit.Player(testId, _mockPlayerService);
+            _player = new PlayroomKit.Player(testId, _mockPlayerService);
+        }
+        [TearDown]
+        public void TearDown()
+        {
+            // Clean up resources if necessary
+            _playroomKit = null;
+            _mockPlayerService = null;
+
+            // Reset static states
+            PlayroomKit.GetPlayers().Clear();
+            // Reset CallbackManager and RPC callbacks
+            CallbackManager.ClearAllCallbacks();
+            PlayroomKit.RPC.ClearAllCallbacksAndEvents();
         }
 
         [Test]

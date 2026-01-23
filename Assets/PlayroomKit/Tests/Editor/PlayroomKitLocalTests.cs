@@ -21,9 +21,25 @@ namespace Playroom.Tests.Editor
             _mockPlayroomService = new LocalMockPlayroomService();
             _rpc = new PlayroomKit.RPC(_playroomKit, _interop);
             _playroomKit = new PlayroomKit(_mockPlayroomService, _rpc);
+            PlayroomKit.IsPlayRoomInitialized = true;
+        }
+        [TearDown]
+        public void TearDown()
+        {
+            // Clean up resources if necessary
+            _playroomKit = null;
+            _mockPlayroomService = null;
+            _interop = null;
+            _rpc = null;
+
+            // Reset static states
+            PlayroomKit.GetPlayers().Clear();
+            // Reset CallbackManager and RPC callbacks
+            CallbackManager.ClearAllCallbacks();
+            PlayroomKit.RPC.ClearAllCallbacksAndEvents();
         }
 
-        [Test]
+        [Test, Order(1)]
         public void InsertCoin_ShouldBeInvoked()
         {
             var mockPlayroomService = Substitute.For<PlayroomKit.IPlayroomBase>();

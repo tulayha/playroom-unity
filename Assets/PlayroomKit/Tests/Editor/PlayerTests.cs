@@ -34,6 +34,22 @@ namespace Playroom.Tests.Editor
             _player = new PlayroomKit.Player(testId, _mockPlayerService);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            // Clean up resources if necessary
+            _playroomKit = null;
+            _mockPlayerService = null;
+            _interop = null;
+
+            // Reset static states
+            PlayroomKit.IsPlayRoomInitialized = false;
+            PlayroomKit.GetPlayers().Clear();
+            // Reset CallbackManager and RPC callbacks
+            CallbackManager.ClearAllCallbacks();
+            PlayroomKit.RPC.ClearAllCallbacksAndEvents();
+        }
+
         [Test]
         public void SetState_Int_CallsIntWrapperWithCorrectParameters()
         {

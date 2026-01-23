@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using AOT;
 using SimpleJSON;
 using UnityEngine;
@@ -190,6 +189,14 @@ namespace Playroom
                 }
             }
 
+            #endregion
+
+            #region Internal for Unit Test TearDown
+            internal static void ClearAllCallbacksAndEvents()
+            {
+                RpcCalledEvents.Clear();
+                OnResponseCallbacks.Clear();
+            }
             #endregion
         }
     }

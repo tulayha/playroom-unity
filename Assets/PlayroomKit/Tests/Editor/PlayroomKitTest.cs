@@ -1,9 +1,10 @@
+using NSubstitute;
 using NUnit.Framework;
+using Playroom;
+using SimpleJSON;
 using System;
 using UnityEngine;
-using Playroom;
-using NSubstitute;
-using SimpleJSON;
+using PlayroomHelper = Playroom.Helpers;
 
 public class PlayroomKitTests
 {
@@ -22,6 +23,24 @@ public class PlayroomKitTests
 
         // Since PlayroomKit uses a private field for the service, we'll need to simulate it or test through the public API
         _playroomKit = new PlayroomKit(_mockPlayroomService, _rpc);
+
+        PlayroomKit.IsPlayRoomInitialized = true;
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        // Clean up resources if necessary
+        _playroomKit = null;
+        _mockPlayroomService = null;
+        _interop = null;
+        _rpc = null;
+
+        // Reset static states
+        PlayroomKit.GetPlayers().Clear();
+        // Reset CallbackManager and RPC callbacks
+        CallbackManager.ClearAllCallbacks();
+        PlayroomKit.RPC.ClearAllCallbacksAndEvents();
     }
 
     [Test]
@@ -38,7 +57,7 @@ public class PlayroomKitTests
         Assert.AreEqual(player1, player2, "GetPlayer should return the same instance for the same playerId.");
     }
 
-    [Test]
+    [Test, Order(1)]
     public void InternalInsertCoin_ShouldBeCalled()
     {
         var interopMock = Substitute.For<PlayroomKit.IInterop>();
@@ -275,14 +294,20 @@ public class PlayroomKitTests
     [Test]
     public void RpcRegister_ShouldInvokeInternal_WhenCalled()
     {
+        // Arrange
         void HandleShoot(string data, string caller)
         {
             Debug.Log($"Caller: {caller}");
             Debug.Log("Shoot called!");
         }
+        string name = "Shoot_" + Guid.NewGuid().ToString();
+        string response = "You shot!";
 
-        _playroomKit.RpcRegister("Shoot", HandleShoot, "You shot!");
-        _interop.Received(1).RpcRegisterWrapper("Shoot", Arg.Any<Action<string>>(), "You shot!");
+        // Act
+        _playroomKit.RpcRegister(name, HandleShoot, response);
+
+        // Assert
+        _interop.Received(1).RpcRegisterWrapper(name, Arg.Any<Action<string>>(), response);
     }
 
     [Test]
@@ -303,7 +328,7 @@ public class PlayroomKitTests
 
         _playroomKit.RpcCall("Shoot", "data is score", PlayroomKit.RpcMode.ALL, () => { receivedCalled = true; });
 
-        UnityEngine.Assertions.Assert.IsTrue(receivedCalled);
+        Assert.IsTrue(receivedCalled);
     }
 
     [Test]
@@ -439,49 +464,6 @@ public class PlayroomKitTests
     public void CreateJoyStick_ShouldInvokeInteropWithCorrectJson()
     {
         // Arrange
-
-        static string ConvertJoystickOptionsToJson(JoystickOptions options)
-        {
-            JSONNode joystickOptionsJson = new JSONObject();
-            joystickOptionsJson["type"] = options.type;
-
-            // Serialize the buttons array
-            JSONArray buttonsArray = new JSONArray();
-            foreach (ButtonOptions button in options.buttons)
-            {
-                JSONObject buttonJson = new JSONObject();
-                buttonJson["id"] = button.id;
-                buttonJson["label"] = button.label;
-                buttonJson["icon"] = button.icon;
-                buttonsArray.Add(buttonJson);
-            }
-
-            joystickOptionsJson["buttons"] = buttonsArray;
-
-            // Serialize the zones property (assuming it's not null)
-            if (options.zones != null)
-            {
-                JSONObject zonesJson = new JSONObject();
-                zonesJson["up"] = ConvertButtonOptionsToJson(options.zones.up);
-                zonesJson["down"] = ConvertButtonOptionsToJson(options.zones.down);
-                zonesJson["left"] = ConvertButtonOptionsToJson(options.zones.left);
-                zonesJson["right"] = ConvertButtonOptionsToJson(options.zones.right);
-                joystickOptionsJson["zones"] = zonesJson;
-            }
-
-            return joystickOptionsJson.ToString();
-        }
-
-        // Function to convert ButtonOptions to JSON
-        static JSONNode ConvertButtonOptionsToJson(ButtonOptions button)
-        {
-            JSONObject buttonJson = new JSONObject();
-            buttonJson["id"] = button.id;
-            buttonJson["label"] = button.label;
-            buttonJson["icon"] = button.icon;
-            return buttonJson;
-        }
-
         var joystickOptions = new JoystickOptions
         {
             type = "dpad",
@@ -499,8 +481,8 @@ public class PlayroomKitTests
             }
         };
 
-        // Assuming ConvertJoystickOptionsToJson is either available or mocked
-        var expectedJsonStr = ConvertJoystickOptionsToJson(joystickOptions);
+        // Utilized Playroom.Helpers (SDKHelpers) to convert options to JSON string
+        var expectedJsonStr = PlayroomHelper.ConvertJoystickOptionsToJson(joystickOptions);
 
         // Act
         _playroomKit.CreateJoyStick(joystickOptions);
