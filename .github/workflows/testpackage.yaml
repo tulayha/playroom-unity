@@ -1,4 +1,4 @@
-name: Create Unity Package on release tag
+name: Create Unity Package for PR/push test
 
 on: 
   [push, pull_request]
