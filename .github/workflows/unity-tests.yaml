@@ -1,6 +1,8 @@
-name: PR Tests
+name: Unity EditMode Tests
 
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
