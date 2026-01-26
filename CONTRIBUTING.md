@@ -7,7 +7,7 @@ Setting up the project locally is similar to any other Unity project:
 3. Fork the repository and clone it to your local drive.
 4. To build the plugin, run these commands in your terminal:
    ```shell
-   cd Assets/Playroomkit
+   cd Tools/playroomkit-js
    npm install
    ```
    This command will install the `upstream.sdk` and its dependencies. It also creates a `Playroom` folder inside `Assets/Plugins`, containing two files: a `.JSLIB` file and a `.JSPRE` file.
