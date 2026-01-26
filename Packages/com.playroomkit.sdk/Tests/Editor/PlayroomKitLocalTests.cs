@@ -17,6 +17,7 @@ namespace Playroom.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            PlayroomKit.CurrentMockMode = PlayroomKit.MockModeSelector.Local;
             _interop = Substitute.For<PlayroomKit.IInterop>();
             _mockPlayroomService = new LocalMockPlayroomService();
             _rpc = new PlayroomKit.RPC(_playroomKit, _interop);

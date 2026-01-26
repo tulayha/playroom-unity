@@ -20,6 +20,7 @@ namespace Playroom.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            PlayroomKit.CurrentMockMode = PlayroomKit.MockModeSelector.Local;
             _playroomKit = new PlayroomKit();
             _playroomKit.InsertCoin(new InitOptions()
             {

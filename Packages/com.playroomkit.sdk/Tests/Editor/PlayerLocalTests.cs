@@ -16,6 +16,7 @@ namespace Playroom.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            PlayroomKit.CurrentMockMode = PlayroomKit.MockModeSelector.Local;
             var _playroomKitService = new LocalMockPlayroomService();
             _playroomKit = new PlayroomKit(_playroomKitService, new PlayroomKit.RPCLocal());
             _playroomKit.InsertCoin(new InitOptions()

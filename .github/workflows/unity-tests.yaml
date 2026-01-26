@@ -35,6 +35,13 @@ jobs:
           packageMode: true
           unityVersion: 2022.3.62f3
           testMode: editmode
-          artifactsPath: test-results
+          artifactsPath: Assets/test-results
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: EditMode Test Results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-test-results
+          path: Assets/test-results

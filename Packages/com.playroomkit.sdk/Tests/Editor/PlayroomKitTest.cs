@@ -16,6 +16,7 @@ public class PlayroomKitTests
     [SetUp]
     public void SetUp()
     {
+        PlayroomKit.CurrentMockMode = PlayroomKit.MockModeSelector.Local;
         _interop = Substitute.For<PlayroomKit.IInterop>();
         // Initialize the mock PlayroomService
         _mockPlayroomService = new PlayroomKit.PlayroomBuildService(_interop);
