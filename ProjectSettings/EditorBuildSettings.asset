@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/PlayroomKit/Examples/2d-platformer/2d-platformer.unity
     guid: cf82eec4c654cf44b89cec2a91afebd5
   - enabled: 0

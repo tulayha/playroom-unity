@@ -32,7 +32,7 @@ export default defineConfig({
       fileName: (format) => `PlayroomFrameworks.jspre`, 
       formats: ['umd']
     },
-    outDir: '../../Assets/Plugins/Playroom',
+    outDir: '../../Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom',
     minify: false,
     rollupOptions: {}
   },

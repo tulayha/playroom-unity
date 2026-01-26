@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.playroomkit.sdk": {
+      "version": "file:com.playroomkit.sdk",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.textmeshpro": "3.0.9"
+      }
+    },
     "com.unity.2d.animation": {
       "version": "9.2.0",
       "depth": 1,
