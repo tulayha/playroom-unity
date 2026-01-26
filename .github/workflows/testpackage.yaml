@@ -12,10 +12,9 @@ jobs:
     - uses: actions/checkout@v4
     
     - run: |
-        echo "Assets/PlayroomKit.meta" > metaList
-        echo "Assets/Plugins.meta" >> metaList
+        echo "Packages/com.playroomkit.sdk.meta" > metaList
         echo "Assets/WebGLTemplates.meta" >> metaList
-        find Assets/PlayroomKit/ -name \*.meta >> metaList
+        find Packages/com.playroomkit.sdk/ -name \*.meta >> metaList
         find Assets/WebGLTemplates/ -name \*.meta >> metaList
         echo metaList
 

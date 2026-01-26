@@ -31,7 +31,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          projectPath: Assets/PlayroomKit
+          projectPath: Packages/com.playroomkit.sdk
           packageMode: true
           unityVersion: 2022.3.62f3
           testMode: editmode
