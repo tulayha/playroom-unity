@@ -1,0 +1,28 @@
+name: Verify JS Plugin (PlayroomKit JS Wrapper) change synced to Unity Package
+
+on:
+  push:
+    paths:
+      - "Tools/playroomkit-js/**"
+      - "Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom/**"
+  pull_request:
+    paths:
+      - "Tools/playroomkit-js/**"
+      - "Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom/**"
+
+jobs:
+  verify-js-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build JS plugin
+        run: npm ci
+        working-directory: Tools/playroomkit-js
+
+      - name: Verify plugin output is up to date
+        run: git diff --exit-code -- Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom
