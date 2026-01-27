@@ -10,6 +10,10 @@ on:
       - "Packages/com.playroomkit.sdk/**"
       - "Tools/playroomkit-js/**"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pack-upm:
     runs-on: ubuntu-latest

@@ -10,6 +10,10 @@ on:
         options:
           - 2d-platformer
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
