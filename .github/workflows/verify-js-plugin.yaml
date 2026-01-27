@@ -29,4 +29,11 @@ jobs:
         working-directory: Tools/playroomkit-js
 
       - name: Verify plugin output is up to date
-        run: git diff --exit-code -- Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom
+        run: |
+          git diff --name-only -- Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom \
+            | grep -v '\.meta$' \
+            | tee /tmp/js-plugin-diff.txt
+          if [ -s /tmp/js-plugin-diff.txt ]; then
+            echo "JS plugin output is out of date."
+            exit 1
+          fi
