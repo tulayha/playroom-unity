@@ -25,8 +25,10 @@ namespace Playroom
                 return;
             }
 
-            var templatesRoot = Path.Combine("Assets", "WebGLTemplates");
-            var destinationPath = Path.Combine(templatesRoot, TemplateName);
+            var templatesRoot = "Assets/WebGLTemplates";
+            var destinationPath = Path.Combine("Assets", "WebGLTemplates", TemplateName);
+            var sourceAssetPath = sourcePath.Replace('\\', '/');
+            var destinationAssetPath = destinationPath.Replace('\\', '/');
 
             if (Directory.Exists(destinationPath))
             {
@@ -48,9 +50,33 @@ namespace Playroom
                 }
             }
 
-            Directory.CreateDirectory(templatesRoot);
-            FileUtil.CopyFileOrDirectory(sourcePath, destinationPath);
-            AssetDatabase.Refresh();
+            AssetDatabase.DisallowAutoRefresh();
+            try
+            {
+                AssetDatabase.Refresh();
+
+                if (AssetDatabase.IsValidFolder(destinationAssetPath))
+                {
+                    AssetDatabase.DeleteAsset(destinationAssetPath);
+                }
+
+                EnsureFolder(templatesRoot);
+
+                var success = CopyAssetFolder(sourceAssetPath, destinationAssetPath);
+                if (!success)
+                {
+                    EditorUtility.DisplayDialog(
+                        "PlayroomKit",
+                        "Failed to copy DiscordTemplate into Assets/WebGLTemplates.",
+                        "OK");
+                    return;
+                }
+            }
+            finally
+            {
+                AssetDatabase.AllowAutoRefresh();
+                AssetDatabase.Refresh();
+            }
 
             EditorUtility.DisplayDialog(
                 "PlayroomKit",
@@ -61,6 +87,15 @@ namespace Playroom
         [MenuItem(SettingsMenuPath)]
         public static void ApplyRecommendedSettings()
         {
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
+            {
+                EditorUtility.DisplayDialog(
+                    "PlayroomKit",
+                    "WebGL is not the active build target. Switch to WebGL in Build Settings first.",
+                    "OK");
+                return;
+            }
+
             var destinationPath = Path.Combine("Assets", "WebGLTemplates", TemplateName);
             if (!Directory.Exists(destinationPath))
             {
@@ -96,6 +131,86 @@ namespace Playroom
                 "Assets",
                 "WebGLTemplates",
                 TemplateName);
+        }
+
+        private static bool CopyAssetFolder(string sourceAssetPath, string destinationAssetPath)
+        {
+            if (!AssetDatabase.IsValidFolder(sourceAssetPath))
+            {
+                return false;
+            }
+
+            if (!AssetDatabase.IsValidFolder(destinationAssetPath))
+            {
+                var parent = Path.GetDirectoryName(destinationAssetPath)?.Replace('\\', '/');
+                var name = Path.GetFileName(destinationAssetPath);
+                if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(name))
+                {
+                    return false;
+                }
+
+                var created = AssetDatabase.CreateFolder(parent, name);
+                if (string.IsNullOrEmpty(created))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var guid in AssetDatabase.FindAssets(string.Empty, new[] { sourceAssetPath }))
+            {
+                var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                if (assetPath == sourceAssetPath)
+                {
+                    continue;
+                }
+
+                var relative = assetPath.Substring(sourceAssetPath.Length).TrimStart('/');
+                var targetPath = $"{destinationAssetPath}/{relative}";
+                if (AssetDatabase.IsValidFolder(assetPath))
+                {
+                    if (!AssetDatabase.IsValidFolder(targetPath))
+                    {
+                        var parent = Path.GetDirectoryName(targetPath)?.Replace('\\', '/');
+                        var name = Path.GetFileName(targetPath);
+                        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(name))
+                        {
+                            return false;
+                        }
+
+                        var created = AssetDatabase.CreateFolder(parent, name);
+                        if (string.IsNullOrEmpty(created))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!AssetDatabase.CopyAsset(assetPath, targetPath))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static void EnsureFolder(string folderPath)
+        {
+            if (AssetDatabase.IsValidFolder(folderPath))
+            {
+                return;
+            }
+
+            var parent = Path.GetDirectoryName(folderPath)?.Replace('\\', '/');
+            var name = Path.GetFileName(folderPath);
+            if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(name))
+            {
+                return;
+            }
+
+            AssetDatabase.CreateFolder(parent, name);
         }
     }
 }

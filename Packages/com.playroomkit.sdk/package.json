@@ -10,6 +10,14 @@
     "multiplayer",
     "webgl"
   ],
+  "files": [
+    "Assets/",
+    "Editor/",
+    "Runtime/",
+    "Samples~/",
+    "Tests/",
+    "*.meta"
+  ],
   "dependencies": {
     "com.unity.textmeshpro": "3.0.9"
   },
