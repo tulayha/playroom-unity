@@ -3,6 +3,12 @@ name: Unity EditMode Tests
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "Packages/com.playroomkit.sdk/**/*.cs"
+      - "Packages/com.playroomkit.sdk/**/*.asmdef"
+      - "Packages/com.playroomkit.sdk/**/*.asmref"
+      - "Packages/com.playroomkit.sdk/**/*.unity"
+      - "Packages/com.playroomkit.sdk/package.json"
   workflow_dispatch:
 
 permissions:

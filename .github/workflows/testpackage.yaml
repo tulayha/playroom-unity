@@ -1,7 +1,9 @@
 name: Create Unity Package for PR/push test
 
-on: 
-  [push, pull_request]
+# Temporarily disabled triggers since switching to upm package
+on:
+  #[push, pull_request]
+  workflow_dispatch:
 
 jobs:
   echo:

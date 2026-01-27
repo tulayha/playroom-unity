@@ -1,7 +1,14 @@
 name: Build UPM Package Artifact
 
 on:
-  [push, pull_request]
+  push:
+    paths:
+      - "Packages/com.playroomkit.sdk/**"
+      - "Tools/playroomkit-js/**"
+  pull_request:
+    paths:
+      - "Packages/com.playroomkit.sdk/**"
+      - "Tools/playroomkit-js/**"
 
 jobs:
   pack-upm:
@@ -12,6 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Install JS toolkit deps
+        run: npm i
+        working-directory: Tools/playroomkit-js
 
       - name: Pack UPM package
         run: |

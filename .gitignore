@@ -76,8 +76,6 @@ crashlytics-build.properties
 .idea/.idea.playroom-unity/.idea/workspace.xml
 metaList
 Tools/playroomkit-js/node_modules/
-Tools/playroomkit-js/package-lock.json
-Tools/playroomkit-js/package-lock.json.meta
 /.idea
 Assets/chromedriver*
 Assets/msedgedriver.exe
