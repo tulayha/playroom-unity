@@ -24,10 +24,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install JS toolkit deps
-        run: npm i
-        working-directory: Tools/playroomkit-js
-
       - name: Pack UPM package
         run: |
           mkdir -p output
