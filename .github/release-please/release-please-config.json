@@ -2,6 +2,8 @@
   "release-type": "simple",
   "package-name": "playroom-unity",
   "changelog-path": "CHANGELOG.md",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
   "draft": true,
   "changelog-sections": [
     {
