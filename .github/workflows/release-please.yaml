@@ -1,4 +1,4 @@
-name: Release Please
+name: Release + Changelog Automation [release-please]
 
 on:
   push:
@@ -23,6 +23,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Prepare release-please config
         run: |
           python - <<'PY'
