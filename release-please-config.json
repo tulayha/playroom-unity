@@ -1,0 +1,32 @@
+{
+  "release-type": "simple",
+  "package-name": "playroom-unity",
+  "changelog-path": "CHANGELOG.md",
+  "draft": true,
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "refactor",
+      "section": "Refactors"
+    },
+    {
+      "type": "revert",
+      "section": "Reverts"
+    }
+  ],
+  "extra-files": [
+    "Packages/com.playroomkit.sdk/package.json",
+    "Tools/playroomkit-js/package.json"
+  ]
+}
