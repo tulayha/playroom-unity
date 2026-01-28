@@ -99,7 +99,7 @@ MonoBehaviour:
   httpServerPort: 6500
   indexFile: {fileID: 4900000, guid: f9b34a310cdb64b38a68c4c1319bf1a7, type: 3}
   includeJavaScriptFiles:
-  - Assets\PlayroomKit\modules\MockMode\BrowserMode\PlayroomMockBrowserBridge.js
+  - Packages\com.playroomkit.sdk\Runtime\modules\MockMode\BrowserMode\PlayroomMockBrowserBridge.js
 --- !u!1 &7050488703328543825
 GameObject:
   m_ObjectHideFlags: 0
@@ -145,3 +145,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manager: {fileID: 8987662522597341863}
+
