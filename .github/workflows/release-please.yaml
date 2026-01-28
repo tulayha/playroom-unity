@@ -5,11 +5,7 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      release_version:
-        description: Manual release version (x.y.z). Leave empty for normal run.
-        required: false
-        type: string
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,33 +19,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Prepare release-please config
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          config_path = Path(".github/release-please/release-please-config.json")
-          output_path = Path(os.environ["RUNNER_TEMP"]) / "release-please-config.json"
-          release_as = os.environ.get("RELEASE_AS", "").strip()
-
-          data = json.loads(config_path.read_text(encoding="utf-8"))
-          if release_as:
-            data["release-as"] = release_as
-          else:
-            data.pop("release-as", None)
-
-          output_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-          print(f"Wrote {output_path}")
-          PY
-        env:
-          RELEASE_AS: ${{ inputs.release_version }}
-
       - uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          config-file: ${{ runner.temp }}/release-please-config.json
+          config-file: .github/release-please/release-please-config.json
           manifest-file: .github/release-please/release-please-manifest.json
