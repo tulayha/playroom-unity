@@ -76,6 +76,7 @@ jobs:
         with:
           unityVersion: 2022.3.62f3
           targetPlatform: WebGL
+          allowDirtyBuild: true
           buildsPath: ${{ env.BUILD_OUTPUT }}
 
       - name: Upload WebGL build
@@ -83,3 +84,4 @@ jobs:
         with:
           name: webgl-${{ inputs.sample }}
           path: build/webgl/${{ inputs.sample }}
+          
