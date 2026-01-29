@@ -36,8 +36,9 @@ jobs:
             const commentTag = "<!-- unity-tests-gate -->";
             const body = [
               commentTag,
-              "Unity EditMode tests are not run automatically for PRs.",
-              "A member/collaborator can trigger them by commenting:",
+              "### Unity EditMode Tests",
+              "Not run automatically for PRs.",
+              "Trigger manually (members/collaborators):",
               "`/run-unity-tests`",
             ].join("\n");
 
