@@ -32,6 +32,7 @@ jobs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       sha: ${{ steps.resolve.outputs.sha }}
       head_repo: ${{ steps.resolve.outputs.head_repo }}
+      comment_id: ${{ steps.resolve.outputs.comment_id }}
     steps:
       - name: Resolve PR from comment
         id: resolve
@@ -69,6 +70,7 @@ jobs:
             core.setOutput("pr_number", String(prNumber));
             core.setOutput("sha", pr.head.sha);
             core.setOutput("head_repo", pr.head.repo.full_name);
+            core.setOutput("comment_id", String(context.payload.comment.id));
 
   unity-tests-pr:
     if: github.event_name == 'issue_comment' && needs.resolve-pr.outputs.should_run == 'true'
@@ -84,6 +86,7 @@ jobs:
             const repo = context.repo.repo;
             const sha = "${{ needs.resolve-pr.outputs.sha }}";
             const prNumber = Number("${{ needs.resolve-pr.outputs.pr_number }}");
+            const commentId = Number("${{ needs.resolve-pr.outputs.comment_id }}");
 
             const labelPending = "unity-test: pending";
             const labelPassed = "unity-test: passed";
@@ -104,6 +107,13 @@ jobs:
               context: "unity-tests",
               description: "Unity tests running",
               target_url: `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+            });
+
+            await github.rest.reactions.createForIssueComment({
+              owner,
+              repo,
+              comment_id: commentId,
+              content: "eyes",
             });
 
             for (const label of [labelPassed, labelFailed]) {
@@ -226,6 +236,7 @@ jobs:
             const repo = context.repo.repo;
             const sha = "${{ needs.resolve-pr.outputs.sha }}";
             const prNumber = Number("${{ needs.resolve-pr.outputs.pr_number }}");
+            const commentId = Number("${{ needs.resolve-pr.outputs.comment_id }}");
             const conclusion = "${{ job.status }}";
 
             const labelPending = "unity-test: pending";
@@ -255,6 +266,13 @@ jobs:
                   ? "Unity tests passed"
                   : "Unity tests failed",
               target_url: `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+            });
+
+            await github.rest.reactions.createForIssueComment({
+              owner,
+              repo,
+              comment_id: commentId,
+              content: conclusion === "success" ? "hooray" : "confused",
             });
 
             try {
