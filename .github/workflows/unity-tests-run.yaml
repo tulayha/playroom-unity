@@ -215,40 +215,6 @@ jobs:
           name: unity-test-results
           path: Assets/test-results
 
-      - name: Summarize test results
-        if: always()
-        id: summarize
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          import xml.etree.ElementTree as ET
-
-          path = "Assets/test-results/editmode-results.xml"
-          total = passed = failed = skipped = 0
-          duration = "unknown"
-          summary = "Results file not found."
-
-          if os.path.exists(path):
-            try:
-              tree = ET.parse(path)
-              root = tree.getroot()
-              total = root.attrib.get("total", total)
-              passed = root.attrib.get("passed", passed)
-              failed = root.attrib.get("failed", failed)
-              skipped = root.attrib.get("skipped", skipped)
-              duration = root.attrib.get("duration", duration)
-              summary = (
-                f"Total: {total} | Passed: {passed} | Failed: {failed} "
-                f"| Skipped: {skipped} | Duration: {duration}s"
-              )
-            except Exception:
-              summary = "Results file present but failed to parse."
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-            f.write(f"summary={summary}\n")
-          PY
-
       - name: Update PR status
         if: always()
         uses: actions/github-script@v7
@@ -331,56 +297,6 @@ jobs:
               });
             }
 
-      - name: Update check run summary
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          SUMMARY: ${{ steps.summarize.outputs.summary }}
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const sha = "${{ needs.resolve-pr.outputs.sha }}";
-            const conclusion = "${{ job.status }}";
-            const summary = process.env.SUMMARY || "Summary unavailable.";
-            const checkName = "EditMode Test Results";
-
-            const { data: checkRuns } = await github.rest.checks.listForRef({
-              owner,
-              repo,
-              ref: sha,
-              check_name: checkName,
-              per_page: 1,
-            });
-
-            const payload = {
-              owner,
-              repo,
-              status: "completed",
-              conclusion: conclusion === "success" ? "success" : "failure",
-              output: {
-                title:
-                  conclusion === "success"
-                    ? "EditMode Test Results - Passed"
-                    : "EditMode Test Results - Failed",
-                summary: summary,
-                text: `Run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
-              },
-            };
-
-            if (checkRuns.total_count > 0) {
-              await github.rest.checks.update({
-                ...payload,
-                check_run_id: checkRuns.check_runs[0].id,
-              });
-            } else {
-              await github.rest.checks.create({
-                ...payload,
-                name: checkName,
-                head_sha: sha,
-              });
-            }
-
   unity-tests-main:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -410,67 +326,3 @@ jobs:
         with:
           name: unity-test-results
           path: Assets/test-results
-
-      - name: Summarize test results
-        if: always()
-        id: summarize
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          import xml.etree.ElementTree as ET
-
-          path = "Assets/test-results/editmode-results.xml"
-          total = passed = failed = skipped = 0
-          duration = "unknown"
-          summary = "Results file not found."
-
-          if os.path.exists(path):
-            try:
-              tree = ET.parse(path)
-              root = tree.getroot()
-              total = root.attrib.get("total", total)
-              passed = root.attrib.get("passed", passed)
-              failed = root.attrib.get("failed", failed)
-              skipped = root.attrib.get("skipped", skipped)
-              duration = root.attrib.get("duration", duration)
-              summary = (
-                f"Total: {total} | Passed: {passed} | Failed: {failed} "
-                f"| Skipped: {skipped} | Duration: {duration}s"
-              )
-            except Exception:
-              summary = "Results file present but failed to parse."
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-            f.write(f"summary={summary}\n")
-          PY
-
-      - name: Publish check run summary
-        if: always()
-        uses: actions/github-script@v7
-        env:
-          SUMMARY: ${{ steps.summarize.outputs.summary }}
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const sha = context.sha;
-            const conclusion = "${{ job.status }}";
-            const summary = process.env.SUMMARY || "Summary unavailable.";
-
-            await github.rest.checks.create({
-              owner,
-              repo,
-              name: "EditMode Test Results",
-              head_sha: sha,
-              status: "completed",
-              conclusion: conclusion === "success" ? "success" : "failure",
-              output: {
-                title:
-                  conclusion === "success"
-                    ? "EditMode Test Results - Passed"
-                    : "EditMode Test Results - Failed",
-                summary: summary,
-                text: `Run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
-              },
-            });

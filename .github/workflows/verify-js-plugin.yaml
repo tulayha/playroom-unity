@@ -2,6 +2,8 @@ name: Verify JS Plugin (PlayroomKit JS Wrapper) change synced to Unity Package
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "Tools/playroomkit-js/**"
       - "Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom/**"
