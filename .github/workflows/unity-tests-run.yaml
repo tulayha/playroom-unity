@@ -213,6 +213,7 @@ jobs:
               conclusion === "success"
                 ? "Unity EditMode tests passed."
                 : "Unity EditMode tests failed.";
+            const runLink = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
             const reportLine =
               reportOutcome && reportOutcome !== "success"
                 ? "Test report failed to publish."
@@ -223,6 +224,7 @@ jobs:
               `**Status:** ${conclusion === "success" ? "passed" : "failed"}`,
               statusLine,
               reportLine,
+              `Run: ${runLink}`,
               "Manual rerun: `/run-unity-tests`",
             ].filter(Boolean).join("\n");
 
