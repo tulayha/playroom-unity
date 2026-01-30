@@ -5,6 +5,7 @@
   "unity": "2022.3",
   "description": "This SDK is a wrapper over PlayroomKit JS. Currently, it only supports WebGL exported games.",
   "documentationUrl": "https://docs.joinplayroom.com/usage/unity",
+  "changelogUrl": "https://github.com/playroomkit/unity/blob/main/CHANGELOG.md",
   "keywords": [
     "playroom",
     "multiplayer",
@@ -39,6 +40,7 @@
     }
   ],
   "author": {
-    "name": "Playroom"
+    "name": "Playroom",
+    "url" : "https://joinplayroom.com"
   }
 }

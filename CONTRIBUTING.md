@@ -7,16 +7,16 @@ Use this if you are only editing C# code, assets, samples, or tests.
 1. Ensure you have [Unity 2022.3.23f1](https://unity.com/releases/editor/whats-new/2022.3.23) installed.
 2. Fork the repository and clone it to your local drive.
 
-### JS bridge (only if you change the WebGL plugin)
-Node.js is only required to rebuild the WebGL JS bridge. The build step installs the upstream JS SDK and generates the `.jslib`/`.jspre` files used by Unity.
+### JS bridge (only if you change the PlayroomKit JS plugin)
+Node.js is only required to rebuild the PlayroomKit JS plugin. The build step installs the upstream JS SDK and generates the `.jslib`/`.jspre` files used by Unity.
 1. Install [NodeJS](https://nodejs.org/en) on your system.
 2. Build the JS bridge:
    ```shell
    cd Tools/playroomkit-js
    npm install
    ```
-   This installs the upstream SDK and builds the WebGL plugin into `Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom` (the `.jslib` and `.jspre` files).
-3. Re-run `npm install` (or `npm run build`) only when `Tools/playroomkit-js/src/index.js` changes.
+   This installs the upstream SDK and builds the plugin into `Packages/com.playroomkit.sdk/Runtime/Plugins/Playroom` (the `.jslib` and `.jspre` files).
+3. Re-run `npm install` only when `Tools/playroomkit-js/src/index.js` changes.
 
 ## Resources
 - User-facing Documentation: https://docs.joinplayroom.com/usage/unity
@@ -56,7 +56,7 @@ Packages/com.playroomkit.sdk
 ├── Playroom.asmdef
 └── PlayroomKit.cs
 ```
-The package also includes a custom WebGL template for Discord activities located in `Packages/com.playroomkit.sdk/Assets/WebGLTemplates`.
+The package also includes a custom WebGL template for Discord activities located in `Packages/com.playroomkit.sdk/Assets/WebGLTemplates`. This can be uploaded to project using the provided menu.
 
 #### Modules
 Playroomkit comes with many [modules](https://docs.joinplayroom.com/components) which help with speeding up development. Unity SDK builds on top of that and adds its own modules such as MockMode.
@@ -93,6 +93,11 @@ Samples are distributed via the package and must be imported into your project t
 2. Select `PlayroomKit` in the list.
 3. In the `Samples` section, click `Import` on the sample you want to run.
 4. Open the imported sample scene from your project `Assets/` folder.
+
+## Editor Menu Options
+Menu options are available to help setup the Unity Editor:
+1. `PlayroomKit > Dev > Apply Playroom Mock Mode to Scene` adds the mock mode prefab to active scene
+2. `PlayroomKit > WebGL > ...` allow setting up editor support for WebGL/discord builds
 
 ### Syncing sample changes
 If the package sample content changes, re-import the sample from the same Package Manager screen (`Samples` section > `Reimport`).
