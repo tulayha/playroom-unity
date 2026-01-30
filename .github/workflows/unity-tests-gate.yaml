@@ -15,7 +15,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  checks: write
 
 concurrency:
   group: unity-tests-gate-${{ github.event.pull_request.number }}
@@ -38,7 +37,6 @@ jobs:
             const labelPassed = "unity-test: passed";
             const labelFailed = "unity-test: failed";
             const commentTag = "<!-- unity-tests-gate -->";
-            const gateCheckName = "Unity Tests Gate";
             const body = [
               commentTag,
               "### Unity EditMode Tests",
@@ -46,18 +44,6 @@ jobs:
               "Trigger manually (members/collaborators):",
               "`/run-unity-tests`",
             ].join("\n");
-
-            await github.rest.checks.create({
-              owner,
-              repo,
-              name: gateCheckName,
-              head_sha: sha,
-              status: "queued",
-              output: {
-                title: "Unity Tests Gate - Pending",
-                summary: "Manual Unity tests required.",
-              },
-            });
 
             for (const label of [labelPassed, labelFailed]) {
               try {
