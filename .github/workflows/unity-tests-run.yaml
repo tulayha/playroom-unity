@@ -189,7 +189,7 @@ jobs:
         with:
           name: EditMode Test Results
           path: Assets/test-results/editmode-results.xml
-          reporter: nunit
+          reporter: dotnet-nunit
           fail-on-error: true
 
       - name: Update PR status
@@ -319,5 +319,5 @@ jobs:
         with:
           name: EditMode Test Results
           path: Assets/test-results/editmode-results.xml
-          reporter: nunit
+          reporter: dotnet-nunit
           fail-on-error: true
