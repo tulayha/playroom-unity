@@ -184,7 +184,7 @@ jobs:
       - name: Publish test report
         id: report
         if: always() && hashFiles('Assets/test-results/editmode-results.xml') != ''
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         continue-on-error: true
         with:
           name: EditMode Test Results
@@ -314,7 +314,7 @@ jobs:
       - name: Publish test report
         id: report
         if: always() && hashFiles('Assets/test-results/editmode-results.xml') != ''
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         continue-on-error: true
         with:
           name: EditMode Test Results

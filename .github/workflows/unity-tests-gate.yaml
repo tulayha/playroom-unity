@@ -9,7 +9,6 @@ on:
       - "Packages/com.playroomkit.sdk/**/*.asmdef"
       - "Packages/com.playroomkit.sdk/**/*.asmref"
       - "Packages/com.playroomkit.sdk/**/*.unity"
-      - "Packages/com.playroomkit.sdk/package.json"
 
 permissions:
   contents: read
