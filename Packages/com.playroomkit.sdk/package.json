@@ -1,7 +1,7 @@
 {
   "name": "com.playroomkit.sdk",
   "displayName": "PlayroomKit",
-  "version": "1.5.4",
+  "version": "2.0.0",
   "unity": "2022.3",
   "description": "This SDK is a wrapper over PlayroomKit JS. Currently, it only supports WebGL exported games.",
   "documentationUrl": "https://docs.joinplayroom.com/usage/unity",
